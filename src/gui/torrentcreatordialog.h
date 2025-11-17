@@ -60,6 +60,7 @@ private slots:
     void onAddFolderButtonClicked();
     void handleCreationFailure(const QString &msg);
     void handleCreationSuccess(const BitTorrent::TorrentCreatorResult &result);
+    void piecesCountCalculated(int count);
 
 private:
     void dropEvent(QDropEvent *event) override;

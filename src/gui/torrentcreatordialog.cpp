@@ -300,16 +300,28 @@ void TorrentCreatorDialog::updateProgressBar(int progress)
 
 void TorrentCreatorDialog::updatePiecesCount()
 {
+    m_ui->buttonCalcTotalPieces->setEnabled(false);
+    m_ui->labelTotalPieces->setText(tr("Calculating..."));
+
     const Path path = m_ui->textInputPath->selectedPath();
 #ifdef QBT_USES_LIBTORRENT2
-    const int count = BitTorrent::TorrentCreator::calculateTotalPieces(
-        path, getPieceSize(), getTorrentFormat());
+    m_threadPool.start([this, path, pieceSize = getPieceSize(), format = getTorrentFormat()]() {
+        const int count = BitTorrent::TorrentCreator::calculateTotalPieces(path, pieceSize, format);
+        QMetaObject::invokeMethod(this, &TorrentCreatorDialog::piecesCountCalculated, count);
+    });
 #else
     const bool isAlignmentOptimized = m_ui->checkOptimizeAlignment->isChecked();
-    const int count = BitTorrent::TorrentCreator::calculateTotalPieces(path
-        , getPieceSize(), isAlignmentOptimized, getPaddedFileSizeLimit());
+    m_threadPool.start([this, path, pieceSize = getPieceSize(), isAlignmentOptimized, padded = getPaddedFileSizeLimit()]() {
+        const int count = BitTorrent::TorrentCreator::calculateTotalPieces(path, pieceSize, isAlignmentOptimized, padded);
+        QMetaObject::invokeMethod(this, &TorrentCreatorDialog::piecesCountCalculated, count);
+    });
 #endif
+}
+
+void TorrentCreatorDialog::piecesCountCalculated(const int count)
+{
     m_ui->labelTotalPieces->setText(QString::number(count));
+    m_ui->buttonCalcTotalPieces->setEnabled(true);
 }
 
 void TorrentCreatorDialog::setInteractionEnabled(const bool enabled) const
